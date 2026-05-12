@@ -30,7 +30,7 @@ let DefaultIcon = L.icon({
 });
 L.Marker.prototype.options.icon = DefaultIcon;
 
-const API_BASE = (import.meta as any).env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE = (import.meta as any).env.VITE_API_URL || '';
 
 // Component to handle map view fitting
 function ChangeView({ bounds }: { bounds: LatLngBoundsExpression }) {
