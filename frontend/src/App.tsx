@@ -32,6 +32,20 @@ L.Marker.prototype.options.icon = DefaultIcon;
 
 const API_BASE = (import.meta as any).env.VITE_API_URL || '';
 
+const normalizeApiError = (err: any) => {
+  const payload = err?.response?.data?.error ?? err?.response?.data?.message ?? err?.message;
+
+  if (typeof payload === 'string') {
+    return payload;
+  }
+
+  if (payload && typeof payload === 'object') {
+    return payload.message || payload.detail || JSON.stringify(payload);
+  }
+
+  return 'Check your internet connection or server status.';
+};
+
 // Component to handle map view fitting
 function ChangeView({ bounds }: { bounds: LatLngBoundsExpression }) {
   const map = useMap();
@@ -63,7 +77,7 @@ function App() {
       setResult(resp.data);
       setSelectedDayIndex(0);
     } catch (err: any) {
-      setError(err.response?.data?.error || 'Check your internet connection or server status.');
+      setError(normalizeApiError(err));
     } finally {
       setLoading(false);
     }

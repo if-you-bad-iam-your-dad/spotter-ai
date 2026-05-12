@@ -10,7 +10,13 @@ class TripCalculateView(APIView):
     """
     
     NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
-    OSRM_URL = "http://router.project-osrm.org/route/v1/driving/"
+    OSRM_URL = "https://router.project-osrm.org/route/v1/driving/"
+
+    def _upstream_get(self, url, **kwargs):
+        kwargs.setdefault("timeout", 20)
+        response = requests.get(url, **kwargs)
+        response.raise_for_status()
+        return response
     
     def post(self, request):
         current_loc = request.data.get("current_location")
@@ -27,7 +33,7 @@ class TripCalculateView(APIView):
             
             for loc in locations:
                 params = {"q": loc, "format": "json", "limit": 1}
-                resp = requests.get(self.NOMINATIM_URL, params=params, headers=headers)
+                resp = self._upstream_get(self.NOMINATIM_URL, params=params, headers=headers)
                 data = resp.json()
                 if not data:
                     return Response({"error": f"Location not found: {loc}"}, status=status.HTTP_400_BAD_REQUEST)
@@ -37,7 +43,7 @@ class TripCalculateView(APIView):
             coord_str = ";".join([f"{c[0]},{c[1]}" for c in coords])
             route_url = f"{self.OSRM_URL}{coord_str}?overview=full&geometries=geojson"
             
-            route_resp = requests.get(route_url)
+            route_resp = self._upstream_get(route_url)
             route_data = route_resp.json()
             
             if route_data.get("code") != "Ok":
@@ -66,5 +72,7 @@ class TripCalculateView(APIView):
                 "stops": all_stop_markers # Use interpolated HOS stops
             })
             
+        except requests.RequestException as e:
+            return Response({"error": f"Upstream routing service failed: {str(e)}"}, status=status.HTTP_502_BAD_GATEWAY)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
